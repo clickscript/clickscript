@@ -116,6 +116,9 @@ object Predef {
 
   def submitPost(stepName: Expression[String], formSelector: Expression[String]) =
     SubmitPostBuilder(stepName, formSelector)
+
+  def submitGet(stepName: Expression[String], formSelector: Expression[String]) =
+    SubmitGetBuilder(stepName, formSelector)
 }
 
 object SubmitPostBuilder {
@@ -140,5 +143,30 @@ case class SubmitPostBuilder private[clickscript](stepName: Expression[String],
            k <- key(session): Option[String];
            v <- value(session): Option[Any]) yield (k, v)
     }
+    .check(extractAllCss, extractCurrentUri)
+}
+
+object SubmitGetBuilder {
+  implicit def submitGetBuilder2HttpRequestBuilder(builder: SubmitGetBuilder) = builder.toHttpBuilder
+}
+
+case class SubmitGetBuilder private[clickscript](stepName: Expression[String],
+                                                  formSelector: Expression[String],
+                                                  formButton: Option[Expression[String]] = None,
+                                                  userParams: Seq[(Expression[String], Expression[Any])] = Nil) {
+  import Predef._
+
+  def formButton(btnCss: Expression[String]) = copy(formButton = Option(btnCss))
+
+  def enterField(name: Expression[String], value: Expression[Any]) = copy(userParams = userParams :+ (name -> value))
+
+  def toHttpBuilder = http(stepName)
+    .get(extractFormUrl(formSelector, formButton))
+    .queryParamsSeq(extractPrefilledValues(formSelector, formButton, userParams map (_._1)))
+    .queryParamsSeq { session =>
+    for ((key, value) <- userParams;
+         k <- key(session): Option[String];
+         v <- value(session): Option[Any]) yield (k, v)
+  }
     .check(extractAllCss, extractCurrentUri)
 }

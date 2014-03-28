@@ -13,12 +13,12 @@ object Predef {
   val lastResponseVarName = "__clickScript_lastResponse"
   val lastUriVarName =  "__clickScript_lastUri"
 
-  val extractAllCss = {
+  val saveLastResponse = {
     bodyString.transform {
       bodyOpt =>
         bodyOpt map {
           body =>
-            CssExtractor.parse(body)
+            new LazyHolder(CssExtractor.parse(body))
         }
     }.saveAs(lastResponseVarName)
   }
@@ -30,20 +30,20 @@ object Predef {
 
   def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {session: Session =>
     for (css <- linkSelector(session);
-         lastResponse <- session(lastResponseVarName).validate[NodeSelector]) yield {
-      val link = lastResponse.select(css).get(occurence)
+         lastResponse <- session(lastResponseVarName).validate[LazyHolder[NodeSelector]]) yield {
+      val link = lastResponse.x.select(css).get(occurence)
       link.getAttribute("href")
     }
   }
 
   def extractFormUrl(formSelector: Expression[String], formButton: Option[Expression[String]]) = {session: Session =>
     formSelector(session) flatMap {css =>
-      session(lastResponseVarName).validate[NodeSelector] flatMap {lastResponse =>
-        val form = lastResponse.selectFirst(css)
+      session(lastResponseVarName).validate[LazyHolder[NodeSelector]] flatMap {lastResponse =>
+        val form = lastResponse.x.selectFirst(css)
         val action = form.getAttribute("action")
         val buttonAction = for (expr <- formButton;
                                 btnCss <- expr(session);
-                                action = lastResponse.selectFirst(btnCss).getAttribute("formaction")
+                                action = lastResponse.x.selectFirst(btnCss).getAttribute("formaction")
                                 if action != null) yield action
         val overallAction = buttonAction orElse Option(action)
         overallAction match {
@@ -55,25 +55,26 @@ object Predef {
     }
   }
 
+  def validValue(x: String) = (x != null) && (x != "")
+
   def extractPrefilledValues(formSelector: Expression[String], formButton: Option[Expression[String]], exclusions: Seq[Expression[String]]) = {session: Session =>
     val exclusionSet: Set[String] = exclusions.flatMap(ex => ex(session): Option[String])(breakOut)
     for (css <- formSelector(session);
-         lastResponse <- session(lastResponseVarName).validate[NodeSelector]) yield {
-      val form = lastResponse.selectFirst(css)
+         lastResponse <- session(lastResponseVarName).validate[LazyHolder[NodeSelector]]) yield {
+      val form = lastResponse.x.selectFirst(css)
       val formSelector = new NodeSelector(form)
 
       val textAndHiddenValues = for (input <- formSelector.select("input[type='text'], input[type='hidden']")
-                                     if input.getAttribute("value") != "") yield {
+                                     if validValue(input.getAttribute("value"))) yield {
         input.getAttribute("name") -> input.getAttribute("value")
       }
 
-      val radioAndCheckboxValues = for (input <- formSelector.select("input[checked]")
-                                        if input.getAttribute("value") != "") yield {
-        input.getAttribute("name") -> input.getAttribute("value")
+      val radioAndCheckboxValues = for (input <- formSelector.select("input[checked]")) yield {
+        input.getAttribute("name") -> (Option(input.getAttribute("value")) getOrElse "on")
       }
 
       val textAreaValues = for (input <- formSelector.select("textarea[name]")
-                                if input.getTextContent != "") yield {
+                                if validValue(input.getTextContent)) yield {
         input.getAttribute("name") -> input.getTextContent
       }
 
@@ -82,13 +83,13 @@ object Predef {
                               firstSelected = selectSelector.select("option[selected]").headOption;
                               first = selectSelector.select("option").headOption;
                               option <- firstSelected orElse first
-                              if option.getAttribute("value") != "") yield {
+                              if validValue(option.getAttribute("value"))) yield {
         select.getAttribute("name") -> option.getAttribute("value")
       }
 
       val buttonValue = for (btnExpr <- formButton;
                              btnCss <- btnExpr(session);
-                             btn = lastResponse.selectFirst(btnCss);
+                             btn = lastResponse.x.selectFirst(btnCss);
                              name = btn.getAttribute("name")
                              if name != null) yield name -> (Option(btn.getAttribute("value")) getOrElse "")
 
@@ -107,12 +108,12 @@ object Predef {
   def goTo(stepName: Expression[String], url: Expression[String]) =
     http(stepName)
       .get(url)
-      .check(extractAllCss, extractCurrentUri)
+      .check(saveLastResponse, extractCurrentUri)
   
   def click(stepName: Expression[String], linkSelector: Expression[String], occurence: Int = 0) =
     http(stepName)
       .get(extractLink(linkSelector, occurence))
-      .check(extractAllCss, extractCurrentUri)
+      .check(saveLastResponse, extractCurrentUri)
 
   def submitPost(stepName: Expression[String], formSelector: Expression[String]) =
     SubmitPostBuilder(stepName, formSelector)
@@ -143,7 +144,7 @@ case class SubmitPostBuilder private[clickscript](stepName: Expression[String],
            k <- key(session): Option[String];
            v <- value(session): Option[Any]) yield (k, v)
     }
-    .check(extractAllCss, extractCurrentUri)
+    .check(saveLastResponse, extractCurrentUri)
 }
 
 object SubmitGetBuilder {
@@ -167,6 +168,10 @@ case class SubmitGetBuilder private[clickscript](stepName: Expression[String],
     for ((key, value) <- userParams;
          k <- key(session): Option[String];
          v <- value(session): Option[Any]) yield (k, v)
-  }
-    .check(extractAllCss, extractCurrentUri)
+    }
+    .check(saveLastResponse, extractCurrentUri)
+}
+
+class LazyHolder[X](f: => X) {
+  lazy val x = f
 }

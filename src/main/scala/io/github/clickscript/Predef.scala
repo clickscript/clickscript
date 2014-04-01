@@ -8,6 +8,7 @@ import jodd.lagarto.dom.{Node, NodeSelector}
 import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
+import scala.util.control.NonFatal
 
 private[clickscript] class Lazy[X](f: => X) {
   lazy val x = f
@@ -58,30 +59,40 @@ object Predef {
   }
 
   private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {session: Session =>
-    for (css <- linkSelector(session);
+    try {
+      for (css <- linkSelector(session);
          lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
-      val selector = new NodeSelector(lastResponse)
-      val link = selector.select(css).get(occurence)
-      link.getAttribute("href")
+        val selector = new NodeSelector(lastResponse)
+        val link = selector.select(css).get(occurence)
+        link.getAttribute("href")
+      }
+    } catch {
+      case NonFatal(e) =>
+        Failure(s"Error extracting link address with CSS $linkSelector: ${e.getLocalizedMessage}")
     }
   }
 
   private[clickscript] def extractFormUrl(formSelector: Expression[String], formButton: Option[Expression[String]]) = {session: Session =>
     formSelector(session) flatMap {css =>
-      session(lastResponseVarName).validate[Lazy[Node]] flatMap {lastResponse =>
-        val selector = new NodeSelector(lastResponse)
-        val form = selector.selectFirst(css)
-        val action = form.getAttribute("action")
-        val buttonAction = for (expr <- formButton;
-                                btnCss <- expr(session);
-                                action = selector.selectFirst(btnCss).getAttribute("formaction")
-                                if action != null) yield action
-        val overallAction = buttonAction orElse Option(action)
-        overallAction match {
-          case Some(a) if a startsWith "?" => session(lastUriVarName).validate[String] map (_ + a)
-          case Some("") | None => session(lastUriVarName).validate[String]
-          case Some(a) => a.success
-        }
+      session(lastResponseVarName).validate[Lazy[Node]] flatMap {
+        lastResponse =>
+          try {
+            val selector = new NodeSelector(lastResponse)
+            val form = selector.selectFirst(css)
+            val action = form.getAttribute("action")
+            val buttonAction = for (expr <- formButton;
+                                    btnCss <- expr(session);
+                                    action = selector.selectFirst(btnCss).getAttribute("formaction")
+                                    if action != null) yield action
+            val overallAction = buttonAction orElse Option(action)
+            overallAction match {
+              case Some(a) if a startsWith "?" => session(lastUriVarName).validate[String] map (_ + a)
+              case Some("") | None => session(lastUriVarName).validate[String]
+              case Some(a) => a.success
+            }
+          } catch {
+            case NonFatal(e) => Failure(s"Could not extract form URL from $css: ${e.getLocalizedMessage}")
+          }
       }
     }
   }

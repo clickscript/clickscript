@@ -4,46 +4,73 @@ import io.gatling.core.session.Expression
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import io.gatling.core.check.extractor.css.CssExtractor
-import jodd.lagarto.dom.NodeSelector
+import jodd.lagarto.dom.{Node, NodeSelector}
 import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
 
-object Predef {
-  val lastResponseVarName = "__clickScript_lastResponse"
-  val lastUriVarName =  "__clickScript_lastUri"
+private[clickscript] class Lazy[X](f: => X) {
+  lazy val x = f
+}
 
-  val saveLastResponse = {
+private[clickscript] object Lazy {
+  implicit def autoExtract[X](h: Lazy[X]): X = h.x
+  def apply[X](x: => X) = new Lazy(x)
+}
+
+object Predef {
+  def goTo(stepName: Expression[String], url: Expression[String]) =
+    http(stepName)
+      .get(url)
+      .check(saveLastResponse, extractCurrentUri)
+
+  def click(stepName: Expression[String], linkSelector: Expression[String], occurence: Int = 0) =
+    http(stepName)
+      .get(extractLink(linkSelector, occurence))
+      .check(saveLastResponse, extractCurrentUri)
+
+  def submitPost(stepName: Expression[String], formSelector: Expression[String]) =
+    SubmitPostBuilder(stepName, formSelector)
+
+  def submitGet(stepName: Expression[String], formSelector: Expression[String]) =
+    SubmitGetBuilder(stepName, formSelector)
+
+  private[clickscript] val lastResponseVarName = "__clickScript_lastResponse"
+  private[clickscript] val lastUriVarName =  "__clickScript_lastUri"
+
+  private[clickscript] val saveLastResponse = {
     bodyString.transform {
       bodyOpt =>
         bodyOpt map {
           body =>
-            new LazyHolder(CssExtractor.parse(body))
+            Lazy(CssExtractor.domBuilder.parse(body))
         }
     }.saveAs(lastResponseVarName)
   }
 
-  implicit def validation2Option[A](v: Validation[A]) = v match {
+  private[clickscript] implicit def validation2Option[A](v: Validation[A]) = v match {
     case Success(x) => Some(x)
     case Failure(_) => None
   }
 
-  def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {session: Session =>
+  private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {session: Session =>
     for (css <- linkSelector(session);
-         lastResponse <- session(lastResponseVarName).validate[LazyHolder[NodeSelector]]) yield {
-      val link = lastResponse.x.select(css).get(occurence)
+         lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
+      val selector = new NodeSelector(lastResponse)
+      val link = selector.select(css).get(occurence)
       link.getAttribute("href")
     }
   }
 
-  def extractFormUrl(formSelector: Expression[String], formButton: Option[Expression[String]]) = {session: Session =>
+  private[clickscript] def extractFormUrl(formSelector: Expression[String], formButton: Option[Expression[String]]) = {session: Session =>
     formSelector(session) flatMap {css =>
-      session(lastResponseVarName).validate[LazyHolder[NodeSelector]] flatMap {lastResponse =>
-        val form = lastResponse.x.selectFirst(css)
+      session(lastResponseVarName).validate[Lazy[Node]] flatMap {lastResponse =>
+        val selector = new NodeSelector(lastResponse)
+        val form = selector.selectFirst(css)
         val action = form.getAttribute("action")
         val buttonAction = for (expr <- formButton;
                                 btnCss <- expr(session);
-                                action = lastResponse.x.selectFirst(btnCss).getAttribute("formaction")
+                                action = selector.selectFirst(btnCss).getAttribute("formaction")
                                 if action != null) yield action
         val overallAction = buttonAction orElse Option(action)
         overallAction match {
@@ -55,13 +82,14 @@ object Predef {
     }
   }
 
-  def validValue(x: String) = (x != null) && (x != "")
+  private[clickscript] def validValue(x: String) = (x != null) && (x != "")
 
-  def extractPrefilledValues(formSelector: Expression[String], formButton: Option[Expression[String]], exclusions: Seq[Expression[String]]) = {session: Session =>
+  private[clickscript] def extractPrefilledValues(formSelector: Expression[String], formButton: Option[Expression[String]], exclusions: Seq[Expression[String]]) = {session: Session =>
     val exclusionSet: Set[String] = exclusions.flatMap(ex => ex(session): Option[String])(breakOut)
     for (css <- formSelector(session);
-         lastResponse <- session(lastResponseVarName).validate[LazyHolder[NodeSelector]]) yield {
-      val form = lastResponse.x.selectFirst(css)
+         lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
+      val selector = new NodeSelector(lastResponse)
+      val form = selector.selectFirst(css)
       val formSelector = new NodeSelector(form)
 
       val textAndHiddenValues = for (input <- formSelector.select("input[type='text'], input[type='hidden']")
@@ -89,7 +117,7 @@ object Predef {
 
       val buttonValue = for (btnExpr <- formButton;
                              btnCss <- btnExpr(session);
-                             btn = lastResponse.x.selectFirst(btnCss);
+                             btn = selector.selectFirst(btnCss);
                              name = btn.getAttribute("name")
                              if name != null) yield name -> (Option(btn.getAttribute("value")) getOrElse "")
 
@@ -103,23 +131,7 @@ object Predef {
     }
   }
   
-  val extractCurrentUri = currentLocation.saveAs(lastUriVarName)
-
-  def goTo(stepName: Expression[String], url: Expression[String]) =
-    http(stepName)
-      .get(url)
-      .check(saveLastResponse, extractCurrentUri)
-  
-  def click(stepName: Expression[String], linkSelector: Expression[String], occurence: Int = 0) =
-    http(stepName)
-      .get(extractLink(linkSelector, occurence))
-      .check(saveLastResponse, extractCurrentUri)
-
-  def submitPost(stepName: Expression[String], formSelector: Expression[String]) =
-    SubmitPostBuilder(stepName, formSelector)
-
-  def submitGet(stepName: Expression[String], formSelector: Expression[String]) =
-    SubmitGetBuilder(stepName, formSelector)
+  private[clickscript] val extractCurrentUri = currentLocation.saveAs(lastUriVarName)
 }
 
 object SubmitPostBuilder {
@@ -170,8 +182,4 @@ case class SubmitGetBuilder private[clickscript](stepName: Expression[String],
          v <- value(session): Option[Any]) yield (k, v)
     }
     .check(saveLastResponse, extractCurrentUri)
-}
-
-class LazyHolder[X](f: => X) {
-  lazy val x = f
 }

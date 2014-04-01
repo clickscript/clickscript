@@ -35,6 +35,10 @@ object Predef {
   def submitGet(stepName: Expression[String], formSelector: Expression[String]) =
     SubmitGetBuilder(stepName, formSelector)
 
+  def exitBrowser = {s: Session =>
+    s.removeAll(lastResponseVarName, lastUriVarName).success
+  }
+
   private[clickscript] val lastResponseVarName = "__clickScript_lastResponse"
   private[clickscript] val lastUriVarName =  "__clickScript_lastUri"
 
@@ -138,10 +142,15 @@ object SubmitPostBuilder {
   implicit def submitPostBuilder2HttpRequestBuilder(builder: SubmitPostBuilder) = builder.toHttpBuilder
 }
 
+trait Builder[X] {
+  def enterField(name: Expression[String], value: Expression[Any]): X
+  def tickCheckbox(name: Expression[String]) = enterField(name, "on")
+}
+
 case class SubmitPostBuilder private[clickscript](stepName: Expression[String],
                                              formSelector: Expression[String],
                                              formButton: Option[Expression[String]] = None,
-                                             userParams: Seq[(Expression[String], Expression[Any])] = Nil) {
+                                             userParams: Seq[(Expression[String], Expression[Any])] = Nil) extends Builder[SubmitPostBuilder] {
   import Predef._
 
   def formButton(btnCss: Expression[String]) = copy(formButton = Option(btnCss))
@@ -166,7 +175,7 @@ object SubmitGetBuilder {
 case class SubmitGetBuilder private[clickscript](stepName: Expression[String],
                                                   formSelector: Expression[String],
                                                   formButton: Option[Expression[String]] = None,
-                                                  userParams: Seq[(Expression[String], Expression[Any])] = Nil) {
+                                                  userParams: Seq[(Expression[String], Expression[Any])] = Nil) extends Builder[SubmitGetBuilder] {
   import Predef._
 
   def formButton(btnCss: Expression[String]) = copy(formButton = Option(btnCss))

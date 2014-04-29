@@ -9,6 +9,7 @@ import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
 import scala.util.control.NonFatal
+import com.typesafe.scalalogging.slf4j.Logging
 
 private[clickscript] class Lazy[X](f: => X) {
   lazy val x = f
@@ -19,7 +20,7 @@ private[clickscript] object Lazy {
   def apply[X](x: => X) = new Lazy(x)
 }
 
-object Predef {
+object Predef extends Logging {
   def clickStep(name: Expression[String]) = StepBuilder(name)
 
   def exitBrowser = {s: Session =>
@@ -60,7 +61,9 @@ object Predef {
   private def exceptionToFailure[X](msg: String)(f: => Validation[X]) = {
     try f
     catch {
-      case NonFatal(e) => Failure(s"$msg: ${e.getLocalizedMessage}")
+      case NonFatal(e) =>
+        logger.error(msg, e)
+        Failure(s"$msg: ${e.getLocalizedMessage}")
     }
   }
 

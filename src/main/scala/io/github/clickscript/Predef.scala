@@ -32,11 +32,8 @@ object Predef extends Logging {
 
   private[clickscript] val saveLastResponse = {
     bodyString.transform {
-      bodyOpt =>
-        bodyOpt map {
-          body =>
-            Lazy(CssExtractor.domBuilder.parse(body))
-        }
+      body =>
+        Lazy(CssExtractor.domBuilder.parse(body))
     }.saveAs(lastResponseVarName)
   }
 

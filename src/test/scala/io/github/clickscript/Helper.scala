@@ -54,7 +54,7 @@ object Helper {
   def applyCheck(checkBuilder: CheckBuilder[HttpCheck, Response, _, _], body: String, sess: Session = new Session("TestRun", "testUser")) = {
     implicit val cache = scala.collection.mutable.Map.empty[Any, Any]
     val response = dummyHtmlBody(body)
-    val success = checkBuilder.build.check(response, sess).map(_(sess)).asInstanceOf[Success[Session]]
+    val success = checkBuilder.build.check(response, sess).map(_.update(sess)).asInstanceOf[Success[Session]]
     success.value
   }
 

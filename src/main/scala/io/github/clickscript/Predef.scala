@@ -42,7 +42,7 @@ object Predef extends Logging {
     case Failure(_) => None
   }
 
-  private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {session: Session =>
+  private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {implicit session: Session =>
     linkSelector(session) flatMap {
       css =>
         exceptionToFailure(s"Could not extract link from $css") {
@@ -55,16 +55,16 @@ object Predef extends Logging {
     }
   }
 
-  private def exceptionToFailure[X](msg: String)(f: => Validation[X]) = {
+  private def exceptionToFailure[X](msg: String)(f: => Validation[X])(implicit session: Session) = {
     try f
     catch {
       case NonFatal(e) =>
-        logger.error(msg, e)
+        logger.error(s"$msg in $session", e)
         Failure(s"$msg: ${e.getLocalizedMessage}")
     }
   }
 
-  private[clickscript] def extractFormUrl(formSelector: Expression[String], occurence: Int = 0, formButton: Option[Expression[String]] = None) = {session: Session =>
+  private[clickscript] def extractFormUrl(formSelector: Expression[String], occurence: Int = 0, formButton: Option[Expression[String]] = None) = {implicit session: Session =>
     formSelector(session) flatMap {css =>
       exceptionToFailure(s"Could not extract form URL from $css") {
         session(lastResponseVarName).validate[Lazy[Node]] flatMap {
@@ -97,7 +97,7 @@ object Predef extends Logging {
   private[clickscript] def extractPrefilledValues(formSelector: Expression[String],
                                                   occurence: Int = 0,
                                                   formButton: Option[Expression[String]] = None,
-                                                  exclusions: Seq[Expression[String]] = Nil) = {session: Session =>
+                                                  exclusions: Seq[Expression[String]] = Nil) = {implicit session: Session =>
     val exclusionSet: Set[String] = exclusions.flatMap(ex => ex(session): Option[String])(breakOut)
     formSelector(session) flatMap {
       css =>

@@ -23,9 +23,9 @@ private[clickscript] object Lazy {
 object Predef extends Logging {
   def clickStep(name: Expression[String]) = StepBuilder(name)
 
-  def exitBrowser = {s: Session =>
+  def exitBrowser = exec({s: Session =>
     s.removeAll(lastResponseVarName, lastUriVarName).success
-  }
+  }).exec(flushHttpCache).exec(flushCookieJar)
 
   private[clickscript] val lastResponseVarName = "__clickScript_lastResponse"
   private[clickscript] val lastUriVarName =  "__clickScript_lastUri"

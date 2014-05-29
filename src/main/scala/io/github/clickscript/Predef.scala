@@ -4,7 +4,7 @@ import io.gatling.core.session.Expression
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import io.gatling.core.check.extractor.css.CssExtractor
-import jodd.lagarto.dom.{Node, NodeSelector}
+import jodd.lagarto.dom.{Document, Node, NodeSelector}
 import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
@@ -60,6 +60,9 @@ object Predef extends Logging {
     catch {
       case NonFatal(e) =>
         logger.error(s"$msg in $session", e)
+        for (document <- session(lastResponseVarName).asOption[Lazy[Document]]) {
+          logger.debug(document.x.getHtml)
+        }
         Failure(s"$msg: ${e.getLocalizedMessage}")
     }
   }

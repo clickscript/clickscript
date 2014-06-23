@@ -4,7 +4,7 @@ import io.gatling.core.session.Expression
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import io.gatling.core.check.extractor.css.CssExtractor
-import jodd.lagarto.dom.{Document, Node, NodeSelector}
+import jodd.lagarto.dom._
 import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
@@ -53,6 +53,27 @@ object Predef extends Logging {
           }
         }
     }
+  }
+  
+  private class FunctionNodeFilter(f: Node => Boolean) extends NodeFilter {
+    def accept(node: Node) = f(node)
+  }
+  
+  private[clickscript] def findLinkByTextRegex(linkTextRegex: Expression[String], occurence: Int = 0) = {implicit session: Session =>
+    linkTextRegex(session) flatMap {
+      regex =>
+        exceptionToFailure(s"Could not find link with text matching $regex") {
+          for (lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
+            object Filter 
+            val selector = new NodeSelector(lastResponse)
+            val link = selector.select(new FunctionNodeFilter(
+              node => node.getNodeName == "a" && node.getTextContent.matches(regex))
+            ).get(occurence)
+            link.getAttribute("href")
+          }
+        }
+    }
+    
   }
 
   private def exceptionToFailure[X](msg: String)(f: => Validation[X])(implicit session: Session) = {

@@ -19,6 +19,11 @@ case class StepBuilder(name: Expression[String]) {
       .get(extractLink(linkSelector, occurence))
       .check(saveLastResponse, extractCurrentUri)
 
+  def clickLinkText(linkRegex: Expression[String], occurence: Int = 0) =
+    http(name)
+      .get(findLinkByTextRegex(linkRegex, occurence))
+      .check(saveLastResponse, extractCurrentUri)
+
   def form(formSelector: Expression[String], occurence: Int = 0): FormBuilder = FormBuilder(name, formSelector)
   def form: FormBuilder = form("form", 0)
 

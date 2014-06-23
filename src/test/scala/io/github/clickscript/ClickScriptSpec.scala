@@ -34,6 +34,18 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
       }
     }
 
+    describe("the findLinkByTextRegex method") {
+      it("should extract links by text and occurence") {
+        val sess = prepareSession("""<a href="notthisone">A</a> <a href="http://localhost">A</a>""")
+        findLinkByTextRegex("^A$", 1)(sess) should equal(Success("http://localhost"))
+      }
+
+      it("should return failure if CSS does not match") {
+        val sess = prepareSession("""<a class="classA" href="notthisone">B</a>""")
+        findLinkByTextRegex("^A$", 1)(sess) shouldBe a [Failure]
+      }
+    }
+
     describe("the extractPrefilledValues method") {
       it("should select forms by css and number") {
         val sess = prepareSession(

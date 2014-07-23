@@ -1,5 +1,6 @@
 package io.github.clickscript
 
+import com.ning.http.client.uri.UriComponents
 import io.gatling.http.response.{Response, StringResponseBody, ResponseBody, HttpResponse}
 import com.ning.http.client.{FluentCaseInsensitiveStringsMap, HttpResponseStatus, Request}
 import java.net.URI
@@ -14,7 +15,7 @@ import io.github.clickscript.Predef._
  * Created by hisg085 on 04/04/2014.
  */
 object Helper {
-  object Status extends HttpResponseStatus(new URI("http://localhost"), null) {
+  object Status extends HttpResponseStatus(UriComponents.create("http://localhost"), null) {
     def getStatusCode: Int = 200
     def getProtocolText: String = "HTTP/1.1"
     def getProtocolMinorVersion: Int = 1

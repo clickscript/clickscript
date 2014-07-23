@@ -28,8 +28,8 @@ case class FormBuilder(stepName: Expression[String],
 
   def post = http(stepName)
     .post(extractFormUrl(formSelector, occurence, formButton))
-    .paramsSeq(extractPrefilledValues(formSelector, occurence, formButton, userParams map (_._1)))
-    .paramsSeq { session =>
+    .formParamSeq(extractPrefilledValues(formSelector, occurence, formButton, userParams map (_._1)))
+    .formParamSeq { session =>
     for ((key, value) <- userParams;
          k <- key(session): Option[String];
          v <- value(session): Option[Any]) yield (k, v)
@@ -38,8 +38,8 @@ case class FormBuilder(stepName: Expression[String],
 
   def get = http(stepName)
     .get(extractFormUrl(formSelector, occurence, formButton))
-    .queryParamsSeq(extractPrefilledValues(formSelector, occurence, formButton, userParams map (_._1)))
-    .queryParamsSeq { session =>
+    .queryParamSeq(extractPrefilledValues(formSelector, occurence, formButton, userParams map (_._1)))
+    .queryParamSeq { session =>
     for ((key, value) <- userParams;
          k <- key(session): Option[String];
          v <- value(session): Option[Any]) yield (k, v)

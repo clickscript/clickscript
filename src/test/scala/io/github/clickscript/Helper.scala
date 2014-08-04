@@ -1,8 +1,14 @@
 package io.github.clickscript
 
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.util
+
+import com.ning.http.client
+import com.ning.http.client.cookie.Cookie
 import com.ning.http.client.uri.UriComponents
 import io.gatling.http.response.{Response, StringResponseBody, ResponseBody, HttpResponse}
-import com.ning.http.client.{FluentCaseInsensitiveStringsMap, HttpResponseStatus, Request}
+import com.ning.http.client._
 import java.net.URI
 import io.gatling.core.util.StandardCharsets
 import io.gatling.core.check.CheckBuilder
@@ -22,6 +28,8 @@ object Helper {
     def getProtocolMajorVersion: Int = 1
     def getProtocolName: String = "HTTP"
     def getStatusText: String = "OK"
+    // Not actually used, so we use a stub implementation
+    def prepareResponse(headers: HttpResponseHeaders, bodyParts: util.List[HttpResponseBodyPart]) = ???
   }
 
   def dummyResponse(body: String) = {

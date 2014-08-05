@@ -37,14 +37,12 @@ Here's an example:
 So, what's the catch? It'll use more memory than a well-optimised, manually correlated script. And it doesn't know
 JavaScript, so you'll have to handle AJAX calls manually.
 
-How do you use it? If you're using Gatling with the Maven plugin, just add the following to the dependencies in your POM:
+How do you use it? If you're using Gatling with the Maven plugin, and using Gatling 2.0.0-RC1, just add the following to the dependencies in your POM:
 
     <dependency>
         <groupId>io.github.clickscript</groupId>
         <artifactId>clickscript_2.10</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.1</version>
         <scope>test</scope>
     </dependency>
-
-For now, we only support Gatling 2.0.0-SNAPSHOT. We'll add support for 2.0.0-M4 when it comes out.
 

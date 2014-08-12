@@ -21,7 +21,7 @@ import io.github.clickscript.Predef._
  * Created by hisg085 on 04/04/2014.
  */
 object Helper {
-  object Status extends HttpResponseStatus(UriComponents.create("http://localhost"), null) {
+  object Status extends HttpResponseStatus(UriComponents.create("http://localhost/index.html"), null) {
     def getStatusCode: Int = 200
     def getProtocolText: String = "HTTP/1.1"
     def getProtocolMinorVersion: Int = 1
@@ -68,6 +68,6 @@ object Helper {
   }
 
   def prepareSession(body: String) = {
-    applyCheck(saveLastResponse, body, new Session("TestRun", "testUser").set(lastUriVarName, "http://localhost"))
+    applyCheck(saveLastResponse, body, new Session("TestRun", "testUser").set(lastUriVarName, "http://localhost/index.html"))
   }
 }

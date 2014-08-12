@@ -1,5 +1,7 @@
 package io.github.clickscript
 
+import java.net.URI
+
 import io.gatling.core.session.Expression
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
@@ -42,14 +44,20 @@ object Predef extends Logging {
     case Failure(_) => None
   }
 
+  private def resolve(baseUri: String, relUri: String) = {
+    new URI(baseUri).resolve(relUri).toString
+  }
+
   private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {implicit session: Session =>
     linkSelector(session) flatMap {
       css =>
         exceptionToFailure(s"Could not extract link from $css") {
-          for (lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
+          for (currentURI <- session(lastUriVarName).validate[String];
+               lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
             val selector = new NodeSelector(lastResponse)
             val link = selector.select(css).get(occurence)
-            link.getAttribute("href")
+            resolve(currentURI, link.getAttribute("href"));
+
           }
         }
     }
@@ -63,13 +71,14 @@ object Predef extends Logging {
     linkTextRegex(session) flatMap {
       regex =>
         exceptionToFailure(s"Could not find link with text matching $regex") {
-          for (lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
+          for (currentURI <- session(lastUriVarName).validate[String];
+               lastResponse <- session(lastResponseVarName).validate[Lazy[Node]]) yield {
             object Filter 
             val selector = new NodeSelector(lastResponse)
             val link = selector.select(new FunctionNodeFilter(
               node => node.getNodeName == "a" && node.getTextContent.matches(regex))
             ).get(occurence)
-            link.getAttribute("href")
+            resolve(currentURI, link.getAttribute("href"))
           }
         }
     }
@@ -108,7 +117,7 @@ object Predef extends Logging {
                   else lastUri + a
                 }
               case Some("") | None => session(lastUriVarName).validate[String]
-              case Some(a) => a.success
+              case Some(a) => resolve(session(lastUriVarName).as[String], a).success
             }
 
         }

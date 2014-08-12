@@ -28,6 +28,16 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
         extractLink(".classA", 1)(sess) should equal(Success("http://localhost"))
       }
 
+      it("should resolve relative links") {
+        val sess = prepareSession("""<a class="classA" href="notthisone">A</a> <a class="classA" href="link.html">B</a>""")
+        extractLink(".classA", 1)(sess) should equal(Success("http://localhost/link.html"))
+      }
+
+      it("should resolve absolute links on the same host") {
+        val sess = prepareSession("""<a class="classA" href="notthisone">A</a> <a class="classA" href="/link.html">B</a>""")
+        extractLink(".classA", 1)(sess) should equal(Success("http://localhost/link.html"))
+      }
+
       it("should return failure if CSS does not match") {
         val sess = prepareSession("""<a class="classA" href="notthisone">A</a>""")
         extractLink(".classB", 1)(sess) shouldBe a [Failure]
@@ -38,6 +48,11 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
       it("should extract links by text and occurence") {
         val sess = prepareSession("""<a href="notthisone">A</a> <a href="http://localhost">A</a>""")
         findLinkByTextRegex("^A$", 1)(sess) should equal(Success("http://localhost"))
+      }
+
+      it("should extract relative links by text") {
+        val sess = prepareSession("""<a href="notthisone">A</a> <a href="link.html">A</a>""")
+        findLinkByTextRegex("^A$", 1)(sess) should equal(Success("http://localhost/link.html"))
       }
 
       it("should return failure if CSS does not match") {
@@ -179,7 +194,7 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
             |<form class="b" action="/404.html"></form>
             |<form class="a" action="/"></form>
           """.stripMargin)
-        extractFormUrl(".a", 1)(sess) should equal(Success("/"))
+        extractFormUrl(".a", 1)(sess) should equal(Success("http://localhost/"))
       }
 
       it("should fail if the form is not found") {
@@ -189,17 +204,22 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
 
       it("should select the current url of the form has no action") {
         val sess = prepareSession("<form></form>")
-        extractFormUrl("form")(sess) should equal(Success("http://localhost"))
+        extractFormUrl("form")(sess) should equal(Success("http://localhost/index.html"))
       }
 
       it("should append actions beginning with a question mark as query strings") {
         val sess = prepareSession("""<form action="?query=yes"></form>""")
-        extractFormUrl("form")(sess) should equal(Success("http://localhost?query=yes"))
+        extractFormUrl("form")(sess) should equal(Success("http://localhost/index.html?query=yes"))
       }
 
       it("should combine query strings") {
         val sess = prepareSession("""<form action="?query=yes"></form>""").set(lastUriVarName, "http://localhost?sess=1")
         extractFormUrl("form")(sess) should equal(Success("http://localhost?sess=1&query=yes"))
+      }
+
+      it("should resolve paths") {
+        val sess = prepareSession("""<form action="post.html"></form>""")
+        extractFormUrl("form")(sess) should equal(Success("http://localhost/post.html"))
       }
 
       it("should prefer actions from buttons, if a button is specified") {
@@ -209,7 +229,7 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
             |  <button formaction="/index.html">Submit</button>
             |</form>
           """.stripMargin)
-        extractFormUrl("form", formButton=Some("button"))(sess) should equal(Success("/index.html"))
+        extractFormUrl("form", formButton=Some("button"))(sess) should equal(Success("http://localhost/index.html"))
       }
 
       it("should use form actions, if a button is specified but has no action") {
@@ -219,7 +239,7 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
             |  <button>Submit</button>
             |</form>
           """.stripMargin)
-        extractFormUrl("form", formButton=Some("button"))(sess) should equal(Success("/index.html"))
+        extractFormUrl("form", formButton=Some("button"))(sess) should equal(Success("http://localhost/index.html"))
       }
     }
   }

@@ -4,7 +4,7 @@ organization := "io.github.clickscript"
 
 normalizedName := "clickscript"
 
-version := "0.2-SNAPSHOT"
+version := "0.1.1"
 
 scalaVersion := "2.10.4"
 

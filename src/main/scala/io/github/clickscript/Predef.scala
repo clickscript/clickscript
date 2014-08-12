@@ -45,7 +45,9 @@ object Predef extends Logging {
   }
 
   private def resolve(baseUri: String, relUri: String) = {
-    new URI(baseUri).resolve(relUri).toString
+    val base = new URI(baseUri)
+    val rootedBase = if (base.getPath == "") base.resolve("/") else base
+    rootedBase.resolve(relUri).toString
   }
 
   private[clickscript] def extractLink(linkSelector: Expression[String], occurence: Int = 0) = {implicit session: Session =>

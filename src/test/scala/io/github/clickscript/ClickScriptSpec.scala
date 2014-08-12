@@ -33,8 +33,13 @@ class ClickScriptSpec extends FunSpec with ShouldMatchers {
         extractLink(".classA", 1)(sess) should equal(Success("http://localhost/link.html"))
       }
 
+      it("should resolve relative links with no path in base URI") {
+        val sess = prepareSession("""<a class="classA" href="notthisone">A</a> <a class="classA" href="link.html">B</a>""").set(lastUriVarName, "http://localhost")
+        extractLink(".classA", 1)(sess) should equal(Success("http://localhost/link.html"))
+      }
+
       it("should resolve absolute links on the same host") {
-        val sess = prepareSession("""<a class="classA" href="notthisone">A</a> <a class="classA" href="/link.html">B</a>""")
+        val sess = prepareSession("""<a class="classA" href="notthisone">A</a> <a class="classA" href="/link.html">B</a>""").set(lastUriVarName, "http://localhost/a/directory/index.html")
         extractLink(".classA", 1)(sess) should equal(Success("http://localhost/link.html"))
       }
 

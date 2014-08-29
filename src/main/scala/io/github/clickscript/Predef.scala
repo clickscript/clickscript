@@ -142,8 +142,10 @@ object Predef extends Logging {
             val form = selector.select(css).get(occurence)
             val formSelector = new NodeSelector(form)
 
-            val textAndHiddenValues = for (input <- formSelector.select("input[type='text'], input[type='hidden']")
-                                           if validValue(input.getAttribute("value"))) yield {
+            val textAndHiddenValues = for (input <- formSelector.select("input")
+                                           if validValue(input.getAttribute("value"))
+                                             && input.getAttribute("type") != "checkbox"
+                                             && input.getAttribute("type") != "radio") yield {
               input.getAttribute("name") -> input.getAttribute("value")
             }
 

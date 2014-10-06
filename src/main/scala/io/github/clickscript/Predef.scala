@@ -31,6 +31,7 @@ object Predef extends Logging {
 
   private[clickscript] val lastResponseVarName = "__clickScript_lastResponse"
   private[clickscript] val lastUriVarName =  "__clickScript_lastUri"
+  private val nonTextInputs = Set("checkbox", "radio", "submit", "button")
 
   private[clickscript] val saveLastResponse = {
     bodyString.transform {
@@ -144,17 +145,19 @@ object Predef extends Logging {
 
             val textAndHiddenValues = for (input <- formSelector.select("input")
                                            if validValue(input.getAttribute("value"))
-                                             && input.getAttribute("type") != "checkbox"
-                                             && input.getAttribute("type") != "radio") yield {
+                                             && validValue(input.getAttribute("name"))
+                                             && !nonTextInputs.contains(input.getAttribute("type"))) yield {
               input.getAttribute("name") -> input.getAttribute("value")
             }
 
-            val radioAndCheckboxValues = for (input <- formSelector.select("input[checked]")) yield {
+            val radioAndCheckboxValues = for (input <- formSelector.select("input[checked]")
+                                              if validValue(input.getAttribute("name"))) yield {
               input.getAttribute("name") -> (Option(input.getAttribute("value")) getOrElse "on")
             }
 
             val textAreaValues = for (input <- formSelector.select("textarea[name]")
-                                      if validValue(input.getTextContent)) yield {
+                                      if validValue(input.getTextContent)
+                                        && validValue(input.getAttribute("name"))) yield {
               input.getAttribute("name") -> input.getTextContent
             }
 
@@ -163,7 +166,8 @@ object Predef extends Logging {
                                     firstSelected = selectSelector.select("option[selected]").headOption;
                                     first = selectSelector.select("option").headOption;
                                     option <- firstSelected orElse first
-                                    if validValue(option.getAttribute("value"))) yield {
+                                    if validValue(option.getAttribute("value"))
+                                      && validValue(select.getAttribute("name"))) yield {
               select.getAttribute("name") -> option.getAttribute("value")
             }
 

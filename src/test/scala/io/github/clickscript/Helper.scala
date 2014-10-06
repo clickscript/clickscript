@@ -1,16 +1,11 @@
 package io.github.clickscript
 
-import java.io.InputStream
-import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.util
 
-import com.ning.http.client
-import com.ning.http.client.cookie.Cookie
-import com.ning.http.client.uri.UriComponents
+import com.ning.http.client.uri.Uri
 import io.gatling.http.response.{Response, StringResponseBody, ResponseBody, HttpResponse}
 import com.ning.http.client._
-import java.net.URI
-import io.gatling.core.util.StandardCharsets
 import io.gatling.core.check.CheckBuilder
 import io.gatling.http.check.HttpCheck
 import io.gatling.core.session.Session
@@ -21,7 +16,7 @@ import io.github.clickscript.Predef._
  * Created by hisg085 on 04/04/2014.
  */
 object Helper {
-  object Status extends HttpResponseStatus(UriComponents.create("http://localhost/index.html"), null) {
+  object Status extends HttpResponseStatus(Uri.create("http://localhost/index.html"), null) {
     def getStatusCode: Int = 200
     def getProtocolText: String = "HTTP/1.1"
     def getProtocolMinorVersion: Int = 1
@@ -35,6 +30,7 @@ object Helper {
   def dummyResponse(body: String) = {
     HttpResponse(
       null,
+      None,
       Some(Status),
       new FluentCaseInsensitiveStringsMap,
       StringResponseBody(body, StandardCharsets.UTF_8),

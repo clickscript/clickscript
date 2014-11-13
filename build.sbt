@@ -4,13 +4,13 @@ organization := "io.github.clickscript"
 
 normalizedName := "clickscript"
 
-version := "0.1.8"
+version := "0.1.9"
 
 scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq(
-  "io.gatling" % "gatling-core" % "2.0.1",
-  "io.gatling" % "gatling-http" % "2.0.1",
+  "io.gatling" % "gatling-core" % "2.0.2",
+  "io.gatling" % "gatling-http" % "2.0.2",
   "org.scalatest" %% "scalatest" % "2.0" % "test"
 )
 

@@ -5,13 +5,13 @@ import java.net.URI
 import io.gatling.core.session.Expression
 import io.gatling.core.Predef._
 import io.gatling.http.Predef._
-import io.gatling.core.check.extractor.css.CssExtractor
+import io.gatling.core.check.extractor.css.{Jodd, CssExtractor}
 import jodd.lagarto.dom._
 import io.gatling.core.validation._
 import scala.collection.JavaConversions._
 import scala.collection.breakOut
 import scala.util.control.NonFatal
-import com.typesafe.scalalogging.slf4j.Logging
+import com.typesafe.scalalogging.LazyLogging
 
 private[clickscript] class Lazy[X](f: => X) {
   lazy val x = f
@@ -22,7 +22,7 @@ private[clickscript] object Lazy {
   def apply[X](x: => X) = new Lazy(x)
 }
 
-object Predef extends Logging {
+object Predef extends LazyLogging {
   def clickStep(name: Expression[String]) = StepBuilder(name)
 
   def exitBrowser = exec({s: Session =>
@@ -32,11 +32,12 @@ object Predef extends Logging {
   private[clickscript] val lastResponseVarName = "__clickScript_lastResponse"
   private[clickscript] val lastUriVarName =  "__clickScript_lastUri"
   private val nonTextInputs = Set("checkbox", "radio", "submit", "button")
+  private val domBuilder = Jodd.newLagartoDomBuilder
 
   private[clickscript] val saveLastResponse = {
     bodyString.transform {
       body =>
-        Lazy(CssExtractor.DomBuilder.parse(body))
+        Lazy(domBuilder.parse(body))
     }.saveAs(lastResponseVarName)
   }
 

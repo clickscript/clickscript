@@ -4,14 +4,15 @@ organization := "io.github.clickscript"
 
 normalizedName := "clickscript"
 
-version := "0.1.9"
+version := "0.2.0"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.4"
 
 libraryDependencies ++= Seq(
-  "io.gatling" % "gatling-core" % "2.0.2",
-  "io.gatling" % "gatling-http" % "2.0.2",
-  "org.scalatest" %% "scalatest" % "2.0" % "test"
+  "io.gatling" % "gatling-core" % "2.1.2",
+  "io.gatling" % "gatling-http" % "2.1.2",
+  "org.scalatest" %% "scalatest" % "2.2.3" % "test",
+  "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2"
 )
 
 publishMavenStyle := true
